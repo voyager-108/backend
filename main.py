@@ -1,4 +1,8 @@
 from fastapi import FastAPI, UploadFile, File
+import requests
+import uvicorn
+import pathlib
+import os 
 
 app = FastAPI()
 
@@ -9,46 +13,51 @@ construction_site_data = []
 statistics_data = {}
 
 
+@app.post('/api/upload-video')
+def upload_video_file(video: UploadFile = File(...)):
+    video_path = f"{video.filename}"
+    with open(video_path, "wb") as file:
+        file.write(video.file.read())
+
+    # Retrieve video parameters
+    file_size = video.file.seek(0, os.SEEK_END)
+    file_name = video.filename
+    file_format = pathlib.Path(file_name).suffix
+
+    # Process the video and extract additional parameters if needed
+
+    # Prepare the data to be sent to the other server
+    data = {
+        'video': open(video_path, 'rb')
+    }
+
+    # Return the video parameters
+    return {
+        'file_name': file_name,
+        'file_size': file_size,
+        'file_format': file_format
+        # Include additional parameters as needed
+    }
+	
+    # Send the video file to the other server
+    # response = requests.post('http://other-server.com/process-video', files=data)
+
+    # # Handle the response from the other server
+    # if response.status_code == 200:
+    #     processed_data = response.json()
+
+    #     # Store the processed data
+    #     # ...
+
+    #     return {'message': 'Video uploaded and processed successfully', 'data': processed_data}
+    # else:
+        # return {'message': 'Error processing video'}
+
+
 @app.post('/api/locations')
 def receive_construction_site_data(data: dict):
     construction_site_data.append(data)
     return {'message': 'Construction site data received successfully'}
-
-
-@app.post('/api/upload-video')
-def upload_video_file(video: UploadFile = File(...)):
-    # Save the uploaded video file
-    video_path = f"uploads/{video.filename}"
-    with open(video_path, "wb") as file:
-        file.write(video.file.read())
-
-    # Process the video using OpenCV and communicate with object detection and room classification servers
-    # ...
-    # Code for video processing, object detection, and room classification
-
-    # Simulated response from object detection server
-    detected_objects = [
-        {"object_name": "Chair", "confidence": 0.92},
-        {"object_name": "Table", "confidence": 0.86},
-        # ...
-    ]
-
-    # Simulated response from room classification server
-    room_classification = "Living Room"
-
-    # Store the processed data
-    processed_data = {
-        "video_path": video_path,
-        "detected_objects": detected_objects,
-        "room_classification": room_classification
-    }
-
-    # Store the processed data in the database or any suitable data storage solution
-    # ...
-    # Code to store the processed data
-
-    return {'message': 'Video uploaded and processed successfully'}
-
 
 @app.get('/api/statistics')
 def get_statistics():
@@ -68,3 +77,7 @@ def get_statistics():
 # Test cases can be written to verify the functionality of different components
 
 # Deployment can be done to a server or cloud platform following FastAPI's deployment guidelines
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8000)
