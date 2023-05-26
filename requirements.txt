@@ -1,0 +1,6 @@
+requests
+json
+shapely
+fastapi
+uvicorn
+pathlib

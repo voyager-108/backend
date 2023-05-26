@@ -1,8 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
-import requests
 import uvicorn
 import pathlib
-import os 
+import os
+from api.construction import ConstructionAPI
+from api.twogis import TwoGISAPI
+from database.communication import DatabaseCommunication
 
 app = FastAPI()
 
@@ -12,6 +14,9 @@ construction_site_data = []
 # Example data storage for calculated statistics
 statistics_data = {}
 
+construction_api = ConstructionAPI()
+twogis_api = TwoGISAPI()
+database_communication = DatabaseCommunication()
 
 @app.post('/api/upload-video')
 def upload_video_file(video: UploadFile = File(...)):
@@ -38,23 +43,8 @@ def upload_video_file(video: UploadFile = File(...)):
         'file_format': file_format
         # Include additional parameters as needed
     }
-	
-    # Send the video file to the other server
-    # response = requests.post('http://other-server.com/process-video', files=data)
 
-    # # Handle the response from the other server
-    # if response.status_code == 200:
-    #     processed_data = response.json()
-
-    #     # Store the processed data
-    #     # ...
-
-    #     return {'message': 'Video uploaded and processed successfully', 'data': processed_data}
-    # else:
-        # return {'message': 'Error processing video'}
-
-
-@app.post('/api/locations')
+@app.post('/api/detect-location')
 def receive_construction_site_data(data: dict):
     construction_site_data.append(data)
     return {'message': 'Construction site data received successfully'}
@@ -77,7 +67,6 @@ def get_statistics():
 # Test cases can be written to verify the functionality of different components
 
 # Deployment can be done to a server or cloud platform following FastAPI's deployment guidelines
-
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)
