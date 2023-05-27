@@ -1,5 +1,12 @@
+
+import sys
+import os
 import requests
-from construction import ConstructionAPI
+
+# Add the path to the 'api' package
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from api.construction import ConstructionAPI
 
 # Create an instance of ConstructionAPI
 api = ConstructionAPI()
