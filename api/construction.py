@@ -41,7 +41,7 @@ class ConstructionAPI:
             }
             self.projects.append(project_data)
 
-    def fetch_projects_info(self):
+    def fetch_project_info(self):
         
         for project in self.projects:
 
