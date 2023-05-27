@@ -4,3 +4,4 @@ shapely
 fastapi
 uvicorn
 pathlib
+python-multipart
