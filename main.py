@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from fastapi import FastAPI, UploadFile, File
 from typing import List
 import uvicorn
@@ -17,7 +18,7 @@ app = FastAPI()
 construction_api = ConstructionAPI()
 construction_api.fetch_projects()
 
-class LocationData:
+class LocationData(BaseModel):
     def __init__(
         self,
         latitude: float,
@@ -161,4 +162,4 @@ def get_statistics(project_slug: str):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8090)
+    uvicorn.run(app, host='0.0.0.0', port=8000)

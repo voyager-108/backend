@@ -1,6 +1,6 @@
 import requests
 
-base_url = 'http://0.0.0.0:8090'  # Replace with the actual server URL
+base_url = 'http://0.0.0.0:8000'  # Replace with the actual server URL
 
 # Test request for uploading a video
 import json
@@ -22,7 +22,7 @@ def test_upload_video():
         print('Upload Video Test: Failed')
 
 def test_propose_section():
-    base_url = "http://localhost:8090"  # Replace with the base URL of your API
+    base_url = "http://localhost:8000"  # Replace with the base URL of your API
     coordinates = [55.7558, 37.6176]  # Random coordinates inside Russia
 
     response = requests.post(f'{base_url}/api/location-section', json=coordinates)
