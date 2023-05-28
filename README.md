@@ -1,28 +1,28 @@
 # Структура проекта
 ### Данный проект имеет следующую структуру:
 
-├── Dockerfile
-├── LICENSE
-├── api
-│   ├── __init__.py
-│   ├── __pycache__
-│   │   └── construction.cpython-310.pyc
-│   ├── construction.py
-│   ├── test_construction.py
-│   └── twogis.py
-├── database
-│   ├── __init__.py
-│   ├── __pycache__
-│   └── communication.py
-├── main.py
-├── requirements.txt
-└── test
-    ├── client.py
-    ├── db_test.py
-    ├── file.mp4
-    ├── geo_test.py
-    ├── test_api.py
-    └── upload_video.py
+├── Dockerfile\
+├── LICENSE\
+├── api\
+│   ├── __init__.py\
+│   ├── __pycache__\
+│   │   └── construction.cpython-310.pyc\
+│   ├── construction.py\
+│   ├── test_construction.py\
+│   └── twogis.py\
+├── database\
+│   ├── __init__.py\
+│   ├── __pycache__\
+│   └── communication.py\
+├── main.py\
+├── requirements.txt\
+└── test\
+    ├── client.py\
+    ├── db_test.py\
+    ├── file.mp4\
+    ├── geo_test.py\
+    ├── test_api.py\
+    └── upload_video.py\
     
 ## Структура проекта состоит из следующих компонентов:
 
