@@ -34,7 +34,6 @@ def test_propose_section():
     else:
         print('Propose Section Test: Failed')
 
-
 # Test request for receiving construction site data
 def test_receive_construction_site_data():
     data = {'key': 'value'}  # Replace with the actual data

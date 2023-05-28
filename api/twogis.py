@@ -6,21 +6,6 @@ from shapely.geometry import mapping
 
 class TwoGisApi:
     
-    """
-    
-	We use this class in order to get the following information: 
-    
-    1) Understanding which project, is the closest and returning the list of top 5 closest projects.
-    2) If we already understood which project is the closest, then we need to understand which building is the closest. 
-    3) When we understood, what building is the closest, we need to understand which section is the closest. 
-    4) When we undertood, what section is the closest, we need to understand what floor and what flat is the closest. 
-    
-    In order to understand this point you have to use, polygon extraction, in order to check wether the current coordinates 
-    belong to this specific polygon. And if they do indeed belong to it, then we'll have to work with it. 
-    
-    
-    """
-    
     def __init__(self):
         self.api_key = "e1fa047d-f2cd-4315-a7b5-140256c78b74"
 

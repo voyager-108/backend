@@ -241,7 +241,8 @@ class ConstructionAPI:
 
     """
     Print functions, used to output current state
-    """       
+    """ 
+          
     def print_project_info(self):
         for project in self.projects:
             print("Project ID:", project["id"])
