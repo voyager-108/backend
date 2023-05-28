@@ -4,5 +4,7 @@ fastapi
 uvicorn
 pathlib
 geopy
+folium
+scipy
 python-multipart
 psycopg2

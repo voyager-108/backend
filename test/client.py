@@ -55,7 +55,26 @@ def test_get_statistics():
     else:
         print('Get Statistics Test: Failed')
 
-test_propose_section()
+def example():
+	# Define the API endpoint URL
+	url = 'http://localhost:8000/api/location-section'
+
+	# Define the coordinates to send in the request
+	coordinates = [10.123, 20.456]
+
+	# Make the POST request with the coordinates
+	response = requests.post(url, json={'coordinates': coordinates})
+
+	# Check the response status code
+	if response.status_code == 200:
+		# Request was successful
+		proposed_section = response.json()
+		print("Proposed section:", proposed_section)
+	else:
+		# Request failed
+		print("Request failed with status code:", response.status_code)
+
+example()
 # Run the test functions
 # test_upload_video()
 # # test_receive_construction_site_data()
