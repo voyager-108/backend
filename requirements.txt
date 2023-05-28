@@ -1,7 +1,8 @@
 requests
-json
 shapely
 fastapi
 uvicorn
 pathlib
+geopy
 python-multipart
+psycopg2

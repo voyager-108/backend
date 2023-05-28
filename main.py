@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from typing import List
 import uvicorn
 import pathlib
 import os
@@ -10,43 +11,115 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from api.construction import ConstructionAPI
 from api.twogis import TwoGisApi
 from database.communication import DatabaseCommunication
-	
+
 app = FastAPI()
 
-# Example data storage for construction site information
-construction_site_data = []
-
-# Example data storage for calculated statistics
-statistics_data = {}
-
 construction_api = ConstructionAPI()
-twogis_api = TwoGisApi()
+construction_api.fetch_projects()
 
+class LocationData:
+    def __init__(
+        self,
+        latitude: float,
+        longitude: float,
+        accuracy: float,
+        altitude: float,
+        speed: float,
+        speedAccuracy: float,
+        heading: float,
+        time: float,
+        isMock: bool
+    ):
+        self.latitude = latitude
+        self.longitude = longitude
+        self.accuracy = accuracy
+        self.altitude = altitude
+        self.speed = speed
+        self.speedAccuracy = speedAccuracy
+        self.heading = heading
+        self.time = time
+        self.isMock = isMock
+        
+
+@app.post('/api/location-section')
+def propose_section(coordinates: list):
+    """
+    This function accepts coordinates and detects the closest project.
+    returns a project, buildings, sections.
+    """
+
+    construction_api.fetch_closest_project(coordinates)
+    print("Fetched the projects!\n")
+    construction_api.fetch_project_building_info()
+    print("Fetched the buildings!\n")
+    proposed_section = construction_api.fetch_building_section_info()
+    print("Fetched the sections!\n")
+    # Perform the logic to detect the section based on the coordinates
+    # ...
+    # Code for detecting the section
+
+    # Return the detected section
+    return {'section': proposed_section}
+
+
+@app.post('/api/select-section')
+def select_section(section: str):
+    """
+    This function accepts a section id, chooses this section, and returns details about this section.
+    returns: number of floors, number of flats.
+    """
+    # Store the selected section in the construction_site_data or perform any necessary logic
+    # ...
+    # Code for selecting the section
+
+    # Return a success message
+    return {'message': 'Section selected successfully'}
+
+
+@app.post('/api/calculate-floor')
+def pick_location(coordinates: list):
+    """
+    This function accepts geolocation, and returns the calculated floor.
+    """
+    # Perform the logic to calculate the floor based on the coordinates
+    # ...
+    # Code for calculating the floor
+
+    # Return the calculated floor
+    calculated_floor = 0
+    return {'floor': calculated_floor}
 
 @app.post('/api/upload-video')
-def upload_video_file(video: UploadFile = File(...)):
-    """
-    This method is called every 5 seconds. It accepts the zipped video file and sends it to the ML server
-    for processing. If it is the first video, it sends the video to the ML server and receives a hash name
-    for the video. If it is not the first video, it keeps sending the video. If the video recording is interrupted
-    on the client side, the client can access another endpoint stating that it is interrupted, and the hash is sent
-    to the ML server to retrieve the results of the video analysis.
-    """
+def upload_video_file(video: UploadFile, locations: List[LocationData]):
     video_path = f"{video.filename}"
     with open(video_path, "wb") as file:
         file.write(video.file.read())
 
     # Retrieve video parameters
-    file_size = video.file.seek(0, os.SEEK_END)
+    file_size = video.file.seek(0, pathlib.SEEK_END)
     file_name = video.filename
     file_format = pathlib.Path(file_name).suffix
 
-    # Process the video and extract additional parameters if needed
+    # Prepare the location data
+    location_data = []
+    for location in locations:
+        location_info = {
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'accuracy': location.accuracy,
+            'altitude': location.altitude,
+            'speed': location.speed,
+            'speedAccuracy': location.speedAccuracy,
+            'heading': location.heading,
+            'time': location.time,
+            'isMock': location.isMock
+        }
+        location_data.append(location_info)
 
     # Prepare the data to be sent to the ML server
-    data = {'video': open(video_path, 'rb')}
+    data = {'video': open(video_path, 'rb'), 'locations': location_data}
 
-    # Send the video to the ML server
+    # Send the video and location data to the ML server
     response = requests.post("ML_SERVER_URL", files=data)
 
     # Handle the response from the ML server
@@ -68,41 +141,12 @@ def upload_video_file(video: UploadFile = File(...)):
         # Video processing failed
         # Handle the error or return an appropriate response
         return {'message': 'Video processing failed'}
-
-
-@app.post('/api/detect-project')
-def detect_project_location(data: dict):
-    """
-    This endpoint is called when a client opens the app
-    and sends their location. Based on the information from the ConstructionAPI class,
-    we need to return the top five projects that are closest to the person.
-    """
-    construction_site_data.append(data)
-    return {'message': 'Construction site data received successfully'}
-
-
-@app.post('/api/detect-section-location')
-def detect_section_location(data: dict):
-    """
-    This endpoint is only called when we have already defined a specific project.
-    We choose between each section using the ConstructionAPI class.
-    """
-    construction_site_data.append(data)
-    return {'message': 'Construction site data received successfully'}
-
-
-@app.post('/api/detect-flat-floor-location')
-def detect_flat_floor_location(data: dict):
-    """
-    This endpoint is only called when we have already defined a specific project and section.
-    We choose between each flat and floor using the ConstructionAPI class and TwoGISAPI class.
-    """
-    construction_site_data.append(data)
-    return {'message': 'Construction site data received successfully'}
-
-
+    
 @app.get('/api/statistics')
-def get_statistics():
+def get_statistics(project_slug: str):
+    """
+    This function accepts a project's slug and returns all the available statistics from the db. 
+    """
     # Perform calculations or analysis on the stored data
     # ...
     # Code for calculating statistics
@@ -112,8 +156,9 @@ def get_statistics():
     # Code to populate statistics_data
 
     # Return the populated statistics_data
+    statistics_data = 1
     return statistics_data
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=8090)
