@@ -1,5 +1,6 @@
 import requests
 from geopy.distance import geodesic
+from api.async_api import async_get
 
 class ConstructionAPI:
 
@@ -12,6 +13,13 @@ class ConstructionAPI:
         self.current_project = None
         self.current_building = None
         self.current_section = None
+
+
+    def unwind_buildings_list(self, buildings):
+        return {
+            building["pk"]: building
+            for building in buildings
+        }
 
     """
     Main fetching functions, that also fill up private attributes. 
@@ -35,17 +43,17 @@ class ConstructionAPI:
                 "ref_id": project["ref_id"],
                 "slug": project["slug"],
                 "coords": project["coords"],
-                "buildings": []
+                "buildings": {}
             }
             self.projects.append(project_data)
 
         return self.projects
 
     def fetch_project_building_info(self):
+        buildings = self.fetch_buildings(self.current_project["slug"]).result()
+        buildings = self.unwind_buildings_list(buildings)
 
-        buildings = self.fetch_buildings(self.current_project["slug"])
-        
-        for building in buildings:
+        for building in buildings.values():
             building_data = {
                     "pk": building["pk"],
                     "name": building["name"],
@@ -59,21 +67,18 @@ class ConstructionAPI:
                     "sections_set": building["section_set"],
                     "sections" : []
                 }
-            self.current_project["buildings"].append(building_data)
+            self.current_project["buildings"][building['pk']] = building_data
         
         return self.current_project
 
     def fetch_building_section_info(self):
-        
-        i = 0
-        for building in self.current_project["buildings"]:
-            
-            sections = self.fetch_sections(building["pk"])
+        section_lists = []
+        for pk, building in self.current_project["buildings"].items():
+            section_lists.append((pk, self.fetch_sections(building["pk"]),))
+            self.current_project["buildings"][pk]["sections"] = []
 
-            self.current_project["buildings"][i]["sections"] = []
-
-            for section in sections:
-                print(section)
+        for pk, sections in section_lists:
+            for section in sections.result():
                 section_data = {
                     "id": section["id"],
                     "plan": section["plan"],
@@ -83,12 +88,10 @@ class ConstructionAPI:
                     "total_count": section["total_count"],
                     "floors": []
                 }
-                self.current_project["buildings"][i]["sections"].append(section_data)
-            
-            self.current_project["buildings"][i]["sections"].sort(key=lambda x: x["number"]) # sort buildings by "number"
+                self.current_project["buildings"][pk]["sections"].append(section_data)
+            # sort buildings by "number"
+            self.current_project["buildings"][pk]["sections"].sort(key=lambda x: x["number"]) 
 
-            i+=1
-            
         return self.current_project
         
     def fetch_section_floor_info(self, section):
@@ -193,51 +196,30 @@ class ConstructionAPI:
         else:
             print("No buildings found.")
 
-    def fetch_closest_section(self, coordinates):
-            
-            """
-
-            TODO: 
-            1) Unpack the coordinates
-            2) If self.current_project == None, tell to pick the project. 
-            3) If self.current_project is picked, extract coordinates from self.current_project. 
-            4) Use extracted coordinates in order to call twogis api, and extract all the building in this project, that belong to "Samolet"
-            5) Call fetch_closest_section providing the coordinates.
-
-            """
-
-            pass  
-
     """
     Fetch functions used to query the api
     """
 
     def fetch_buildings(self, slug):
-
         url = f"https://samolet.ru/api_redesign/projects_buildings/{slug}/flats"
-        response = requests.get(url)
-        data = response.json()
-        return data
+        response = async_get(url)
+        return response
 
     def fetch_sections(self, building_pk):
-
         url = f"https://samolet.ru/api_redesign/buildings_sections/{building_pk}/flats/"
-        response = requests.get(url)
-        data = response.json()
-        return data
+        response = async_get(url)
+        return response
 
     def fetch_floors(self, floor_id):
 
         url = f"https://samolet.ru/api_redesign/floors_properties/{floor_id}/flats/"
-        response = requests.get(url)
-        data = response.json()
-        return data
+        response = async_get(url)
+        return response
         
     def fetch_flats(self, flat_id):
         url = f"https://samolet.ru/api_redesign/flats/{flat_id}/"
-        response = requests.get(url)
-        data = response.json()
-        return data
+        response = async_get(url)
+        return response
 
     """
     Print functions, used to output current state
