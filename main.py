@@ -1,6 +1,7 @@
+import uuid
 from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File
-from typing import List
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body
+from typing import Annotated, List
 import uvicorn
 import json
 import pathlib
@@ -10,13 +11,19 @@ import requests
 import random
 import folium
 import math
+import aiohttp
+import logging
 from scipy.spatial import ConvexHull
+
+from database.utils import *
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.construction import ConstructionAPI
 from api.twogis import TwoGisApi
 from database.communication import DatabaseCommunication
+
+from models import *
 
 app = FastAPI()
 
@@ -26,26 +33,13 @@ construction_api.fetch_projects()
 
 reference_altitude = None  # Global variable to store the reference altitude
 
-class Coordinates(BaseModel):
-    coordinates: list[float]
+logger = logging.getLogger('server')
+logger.setLevel(logging.INFO)
+handler =logging.StreamHandler()
+handler.setFormatter(logging.Formatter('[%(asctime)s] :: %(message)s'))
+logger.addHandler(handler)
 
-class SelectSectionRequest(BaseModel):
-    project_slug: str
-    building_pk: str
-    section_id: str
 
-class AltitudeRequest(BaseModel):
-    altitude: float
-
-class LocationInfo(BaseModel):
-    latitude: float
-    longitude: float
-    accuracy: float
-    altitude: float
-
-class VideoProcessingRequest(BaseModel):
-    video_file: UploadFile
-    positions: List[LocationInfo]
 
 def generate_polygon(request: VideoProcessingRequest):
     # Get the positions from the request
@@ -131,51 +125,115 @@ def select_floor(request: AltitudeRequest):
     return {'floor': calculated_floor}
 
 @app.post('/api/process-video')
-async def process_video(request: VideoProcessingRequest):
+async def process_video( 
+        video: UploadFile = File(...),
+        locations: list[LocationInfo] = [],
+        embedding: list[str] = [],
+        yolo_results: list[str] = [],
+        session: Annotated[str, Body(embed=True)] = None,
+        final: Annotated[bool, Body(embed=True)] = False
+    ):
     """
     This function accepts a video file and a list of position information.
     It processes the video and position data.
     """
-    video = request.video
-    locations = request.locations
+    logger.info(f'[v2] Video: ({video.filename}). Session: ({session})')
+
+    video = video
+    session = session or uuid.uuid4().hex
+
+    save_session(session)
 
     video_path = f"{video.filename}"
     with open(video_path, "wb") as file:
         file.write(await video.read())
 
-    data = {'video': open(video_path, 'rb')}
+    data = {
+        'video': open(video_path, 'rb'),
+    }
 
-    # Prepare the location data
-    location_data = []
-    for location in locations:
-        location_info = {
-            'latitude': location.latitude,
-            'longitude': location.longitude,
-            'accuracy': location.accuracy,
-            'altitude': location.altitude,
-        }
-        location_data.append(location_info)
+    if final:
+        logger.info(f'[v2] Finalizing session: ({session})')
 
-    # Send the video to the ML server
-    response = requests.post("http://178.170.197.93:7080/score-card/video", files=data)
+        embeddings = get_embeddings(session)
+        yolo_results = get_yolo_results(session)
 
-    # Handle the response from the ML server
-    if response.status_code == 200:
-        # Video processing successful
-        result = response.json()
-        print("Successful!")  # Retrieve the video hash from the response
-        # Additional processing or storing of the video hash can be done here
+        logger.info(f'[v2] Total num. of embeddings: ({len(embeddings)}), YOLOv8 results: ({len(yolo_results)})')
 
-        # Save the result as JSON in output.json
-        with open('output.json', 'w') as output_file:
-            json.dump(result, output_file)
+        data['embeddings'] = [embedding.s3_reference for embedding in embeddings]
+        data['yolo_results'] = [yolo_result.s3_reference for yolo_result in yolo_results]
+        data['isLast'] = True
+    
 
-        # Return the video hash.
-        return {'video_hash': "success"}
-    else:
-        # Video processing failed
-        # Handle the error or return an appropriate response
-        return {'message': 'Video processing failed'}
+    compute_request = aiohttp.FormData()
+
+    for key, value in data.items():
+        if isinstance(value, list):
+            for item in value:
+                compute_request.add_field(key, item)
+        elif isinstance(value, int) or isinstance(value, float) or isinstance(value, bool):
+            compute_request.add_field(key, str(value))
+        else:
+            compute_request.add_field(key, value)
+
+    async with aiohttp.ClientSession() as client:
+        response = client.post("http://178.170.197.93:7080/score-card/v2/video", data=compute_request)
+
+        # response = requests.post("http://178.170.197.93:7080/score-card/video", files=data)
+        # Prepare the location data
+
+        # @teexone: I think this is not needed anymore
+        # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        location_data = []
+        for location in locations:
+            location_info = {
+                'latitude': location.latitude,
+                'longitude': location.longitude,
+                'accuracy': location.accuracy,
+                'altitude': location.altitude,
+            }
+            location_data.append(location_info)
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        # @teexone: I think this is not needed anymore
+
+        save_locations(session, locations)
+
+        # Send the video to the ML server
+
+        # Handle the response from the ML server
+
+        async with response as r:
+            if r.ok:
+                # Video processing successful
+                result = await r.json()
+                # Additional processing or storing of the video hash can be done here
+
+                # Save the result as JSON in output.json
+                with open('output.json', 'w') as output_file:
+                    json.dump(result, output_file)
+
+                if final:
+                    logger.info(f'[v2] Result from processing server. Finalized session: ({session})')
+                    return await r.json()
+                
+                else:
+                    logger.info(f'[v2] Result from processing server. Session: ({session}). Embeddings: ({result["embeddings"]}). '
+                                f'YOLOv8 results: ({result["yolo"]})')
+                    
+                    db_embed = save_embeddings(session, result['embeddings'])
+                    db_yolo = save_yolo_results(session, result['yolo'])
+
+                    logger.info(f'[v2] Saved embeddings and YOLOv8 results. Session: ({session}). '
+                                f' Embeddings [id= {db_embed.id}]. YOLOv8 results: [id= {db_yolo.id}]')
+                    
+                # Return the video hash.
+                return {"session": session}
+
+
+            else:
+                HTTPException(r.status, r.reason)
+        
+    
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)
