@@ -157,7 +157,7 @@ async def process_video(request: VideoProcessingRequest):
         location_data.append(location_info)
 
     # Send the video to the ML server
-    response = requests.post("http://178.170.197.93:7080/score-card/video", files=data)
+    response = requests.post("http://voyager108.ru:7080", files=data)
 
     # Handle the response from the ML server
     if response.status_code == 200:
