@@ -1,5 +1,6 @@
 from fastapi.routing import APIRouter
 from api.construction import construction_api
+from database.models import SessionLocationReference
 
 router = APIRouter(
     prefix="/samolet",
@@ -61,6 +62,31 @@ async def fetchAllSections(building_pk: str):
         })
 
     return return_sections
+
+@router.post("/updateSectionReference")
+async def updateSectionReference(request: SessionLocationReference._meta.FastAPIModel):
+    if request.session is None:
+        return 
+    
+    session = request.session
+
+    _ref = SessionLocationReference.get_or_none(session=session)
+    if _ref is not None:
+        SessionLocationReference.update(
+            **request.dict(),
+        ).where(SessionLocationReference.session == session).execute()
+
+    else:
+        SessionLocationReference.insert(
+            **request.dict(),
+        ).execute()
+
+    return SessionLocationReference.get_or_none(session=session)
+
+
+@router.get("/fetchSectionReference")
+async def fetchSectionReference(session: str):
+    return SessionLocationReference.get_or_none(session=session)
 
 
 # # Should be implented in the future

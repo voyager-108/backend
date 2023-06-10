@@ -137,8 +137,6 @@ def select_floor(request: AltitudeRequest):
 async def process_video( 
         video: UploadFile = File(...),
         locations: list[LocationInfo] = [],
-        embedding: list[str] = [],
-        yolo_results: list[str] = [],
         session: Annotated[str, Body(embed=True)] = None,
         final: Annotated[bool, Body(embed=True)] = False
     ):

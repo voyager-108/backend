@@ -1,4 +1,5 @@
 from database import BaseModel, CharField, AutoField, FloatField, ForeignKeyField, IntegerField, db_ref
+from pydantic import BaseModel as PydanticBaseModel
 
 class Session(BaseModel):
     id = CharField(primary_key=True, max_length=256)
@@ -31,4 +32,22 @@ class YOLOResult(BaseModel):
     session = ForeignKeyField(Session, backref='embeddings')
 
 
-db_ref.create_tables([Session, Point, Statistics, Embedding, YOLOResult])
+class SessionLocationReference(BaseModel):
+    id = AutoField()
+    session = ForeignKeyField(Session, backref='locations')
+    project_slug = CharField(max_length=256, null=True)
+    building_pk = IntegerField(null=True)
+    section_id = IntegerField(null=True)
+    floor_id = IntegerField(null=True)
+
+    class Meta:
+        class FastAPIModel(PydanticBaseModel):
+            session: str
+            project_slug: str = None
+            building_pk: int = None
+            section_id: int = None
+            floor_id: int = None
+
+
+
+db_ref.create_tables([Session, Point, Statistics, Embedding, YOLOResult, SessionLocationReference])
