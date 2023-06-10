@@ -10,6 +10,8 @@ def save_locations(session: str, locations: list[LocationInfo]):
         Point.create(
             latitude=location.latitude,
             longitude=location.longitude,
+            altitude=location.altitude,
+            accuracy=location.accuracy,
             step=step,
             session=session
         )

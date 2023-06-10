@@ -8,6 +8,8 @@ class Point(BaseModel):
     id = AutoField()
     latitude = FloatField()
     longitude = FloatField()
+    altitude = FloatField(null=True)
+    accuracy = FloatField(null=True)
     step = IntegerField()
     session = ForeignKeyField(Session, backref='points')
 
