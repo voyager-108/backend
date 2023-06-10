@@ -211,7 +211,6 @@ class ConstructionAPI:
         return response
 
     def fetch_floors(self, floor_id):
-
         url = f"https://samolet.ru/api_redesign/floors_properties/{floor_id}/flats/"
         response = async_get(url)
         return response
@@ -279,3 +278,5 @@ class ConstructionAPI:
                             print("Flat Price:", flat["price"])
                             print("----------------------------------------")
 
+construction_api = ConstructionAPI()
+construction_api.fetch_projects()

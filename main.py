@@ -1,35 +1,44 @@
 import uuid
-from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, UploadFile, File, Body
-from typing import Annotated, List
 import uvicorn
 import json
-import pathlib
 import os
 import sys
 import requests
-import random
 import folium
-import math
 import aiohttp
 import logging
+
+from typing import Annotated, List
 from scipy.spatial import ConvexHull
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body
 
 from database.utils import *
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from api.construction import ConstructionAPI
+from api.construction import construction_api
 from api.twogis import TwoGisApi
 from database.communication import DatabaseCommunication
+
 
 from models import *
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
 
-construction_api = ConstructionAPI()
-construction_api.fetch_projects()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True, 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from api.samolet import router as samolet_router
+
+app.router.include_router(samolet_router)
+
 
 reference_altitude = None  # Global variable to store the reference altitude
 
