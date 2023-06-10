@@ -184,7 +184,7 @@ async def process_video(
             compute_request.add_field(key, value)
 
     async with aiohttp.ClientSession() as client:
-        response = client.post("http://178.170.197.93:7080/score-card/v2/video", data=compute_request)
+        response = client.post("http://voyager108.ru:7080/score-card/v2/video", data=compute_request)
 
         # response = requests.post("http://178.170.197.93:7080/score-card/video", files=data)
         # Prepare the location data
